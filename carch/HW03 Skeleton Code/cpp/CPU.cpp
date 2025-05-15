@@ -63,7 +63,8 @@ uint32_t CPU::tick() {
 	rf.read(parsed_inst.rs, parsed_inst.rt, &rs_data, &rt_data);
 
 	operand1 = rs_data;
-	operand2 = rt_data;
+	if(controls.ALUSrc) operand2 = ext_imm;
+	else operand2 = rt_data;
 
 	alu.compute(operand1, operand2, parsed_inst.shamt, controls.ALUOp, &alu_result);
 	if (status != CONTINUE) return 0;
@@ -74,11 +75,27 @@ uint32_t CPU::tick() {
 
 	// Update the PC
 	// Jump Branch 확인
-	PC_next = PC + 4;
+	if(controls.Jump){
+		PC_next =  ((PC + 4) & 0xF0000000) | (parsed_inst.immj<<2);
+	}
+	else if(controls.JR){
+		PC_next = rs_data;
+	}
+	else if(controls.Branch && alu_result){
+		PC_next += ext_imm;
+	}
+	else{
+		PC_next = PC + 4;
+	}
+	
 
 	// WB
-	wr_addr = ??;
-	wr_data = ??;
+	if(controls.RegDst) wr_addr = parsed_inst.rd;
+	else if(controls.SavePC) wr_addr = 31;
+	else wr_addr = parsed_inst.rt;
+	
+	if(controls.MemtoReg) wr_data = mem_data;
+	else wr_data = alu_result;
 
 	// Update the PC register last ...
 	PC = PC_next;

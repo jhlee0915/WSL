@@ -16,7 +16,8 @@ void CTRL::controlSignal(uint32_t opcode, uint32_t funct, Controls *controls) {
 	controls->RegWrite = (opcode != OP_SW) && (opcode != OP_BEQ) && (opcode != OP_BNE) && (opcode!=OP_J) && !((opcode == OP_RTYPE) && (funct == FUNCT_JR));
 	controls->MemRead = (opcode == OP_LW);
 	controls->MemWrite = (opcode == OP_SW);
-	controls->Branch = (opcode == OP_BEQ) && (opcode == OP_BNE);
+	controls->Branch = (opcode == OP_BEQ) || (opcode == OP_BNE);
+	controls->SavePC = (opcode == OP_JAL);
 	if(opcode == OP_RTYPE){
 		switch (funct) {
 			case FUNCT_ADDU:
@@ -68,6 +69,12 @@ void CTRL::controlSignal(uint32_t opcode, uint32_t funct, Controls *controls) {
 		case OP_LUI:
 			controls->ALUOp = ALU_LUI;
 			break;
+		case OP_LW:
+			controls->ALUOp = ALU_ADDU;
+			break;
+		case OP_SW:
+			controls->ALUOp = ALU_ADDU;
+			break;
 		default:
 			break;
 		}
@@ -86,10 +93,16 @@ void CTRL::splitInst(uint32_t inst, ParsedInst *parsed_inst) {
 	parsed_inst->shamt = (inst<<21)>>27;
 	parsed_inst->funct = (inst<<26)>>26;
 	parsed_inst->immi = (inst<<16)>>16;
-	parsed_inst->rs = (inst<<6)>>6;
+	parsed_inst->immj = (inst<<6)>>6;
 }
 
 // Sign extension using bitwise shift
 void CTRL::signExtend(uint32_t immi, uint32_t SignExtend, uint32_t *ext_imm) {
 	// FILLME
+	 if (SignExtend) {
+        int32_t signed_imm = (int16_t)(immi & 0xFFFF);
+        *ext_imm = (uint32_t)signed_imm;
+    } else {
+        *ext_imm = immi & 0xFFFF;
+    }
 }
