@@ -59,5 +59,6 @@ void ALU::compute(uint32_t operand1, uint32_t operand2,
 		default:
             break;
 	}
+
 }
 

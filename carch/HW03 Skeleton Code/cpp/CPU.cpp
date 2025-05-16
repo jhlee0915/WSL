@@ -53,12 +53,14 @@ uint32_t CPU::tick() {
 	// Access the instruction memory
 	mem.imemAccess(PC, &inst);
 	if (status != CONTINUE) return 0;
-	
+
 	// Split the instruction & set the control signals
 	ctrl.splitInst(inst, &parsed_inst);
 	ctrl.controlSignal(parsed_inst.opcode, parsed_inst.funct, &controls);
 	ctrl.signExtend(parsed_inst.immi, controls.SignExtend, &ext_imm);
+
 	if (status != CONTINUE) return 0;
+
 
 	rf.read(parsed_inst.rs, parsed_inst.rt, &rs_data, &rt_data);
 
@@ -75,27 +77,28 @@ uint32_t CPU::tick() {
 
 	// Update the PC
 	// Jump Branch 확인
+	PC_next = PC + 4;
 	if(controls.Jump){
-		PC_next =  ((PC + 4) & 0xF0000000) | (parsed_inst.immj<<2);
+		PC_next =  (PC_next & 0xF0000000) | (parsed_inst.immj<<2);
 	}
 	else if(controls.JR){
 		PC_next = rs_data;
 	}
 	else if(controls.Branch && alu_result){
-		PC_next += ext_imm;
+		PC_next = PC_next + ext_imm;
 	}
-	else{
-		PC_next = PC + 4;
-	}
-	
+
+
 
 	// WB
 	if(controls.RegDst) wr_addr = parsed_inst.rd;
 	else if(controls.SavePC) wr_addr = 31;
 	else wr_addr = parsed_inst.rt;
-	
+
 	if(controls.MemtoReg) wr_data = mem_data;
 	else wr_data = alu_result;
+
+	rf.write(wr_addr, wr_data, controls.RegWrite);
 
 	// Update the PC register last ...
 	PC = PC_next;
