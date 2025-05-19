@@ -52,6 +52,7 @@ uint32_t CPU::tick() {
 
 	// Access the instruction memory
 	mem.imemAccess(PC, &inst);
+	//cout<<hex<<PC<<endl;
 	if (status != CONTINUE) return 0;
 
 	// Split the instruction & set the control signals
@@ -85,7 +86,7 @@ uint32_t CPU::tick() {
 		PC_next = rs_data;
 	}
 	else if(controls.Branch && alu_result){
-		PC_next = PC_next + ext_imm;
+		PC_next = PC_next + (ext_imm<<2);
 	}
 
 
@@ -96,6 +97,7 @@ uint32_t CPU::tick() {
 	else wr_addr = parsed_inst.rt;
 
 	if(controls.MemtoReg) wr_data = mem_data;
+	else if(controls.SavePC) wr_data = PC + 4;
 	else wr_data = alu_result;
 
 	rf.write(wr_addr, wr_data, controls.RegWrite);
