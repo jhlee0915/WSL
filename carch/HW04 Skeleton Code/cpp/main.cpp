@@ -47,11 +47,16 @@ int main(int argc, char* argv[]) {
 	// 2) r: print the register files
 	// 3) c: continue until the last
 	// 4) q: quit (early exit)
+	uint32_t a;
 	while(status == Status::CONTINUE) {
 		cin.get(cmd);
 		switch(cmd) {
 			case 's':
 				cpu.tick();
+				break;
+			case 'p':
+				cin>>hex>>a;
+				while(cpu.PC!=a) cpu.tick();
 				break;
 			case 'r':
 				cpu.rf.dump();

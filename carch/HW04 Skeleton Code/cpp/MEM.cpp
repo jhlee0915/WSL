@@ -57,4 +57,6 @@ void MEM::memAccess(uint32_t addr, uint32_t *read_data, uint32_t write_data, uin
 		memory[addr] = write_data;
 	else if (MemRead)
 		*read_data = memory[addr];
+	if (*read_data == 0)
+		status = TERMINATE;
 }
