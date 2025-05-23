@@ -7,7 +7,7 @@
 
 using namespace std;
 
-#define debug 0
+#define debug 1
 
 CPU::CPU() {}
 
@@ -55,8 +55,8 @@ uint32_t CPU::tick() {
 	ctrl.controlSignal(pasrsed_IR.opcode, pasrsed_IR.funct, &state, &controls);
 
 	// Access the memory
-	if(controls.IorD == 0) mem.memAccess(PC, &IR, B, controls.MemRead, controls.MemWrite);
-	else mem.memAccess(ALUOut, &MDR, B, controls.MemRead, controls.MemWrite);
+	if(controls.IorD == 0) mem.memAccess(PC, &IR, B, controls.MemRead, controls.MemWrite, controls.IorD);
+	else mem.memAccess(ALUOut, &MDR, B, controls.MemRead, controls.MemWrite, controls.IorD);
 	if(debug) cout<<"inst: "<<hex<<IR<<endl;
 	if(debug) cout<<"MDR: "<<hex<<MDR<<endl;
 

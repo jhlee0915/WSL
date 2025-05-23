@@ -39,7 +39,7 @@ void MEM::load(string inst_file) {
 		status = CONTINUE;
 }
 
-void MEM::memAccess(uint32_t addr, uint32_t *read_data, uint32_t write_data, uint32_t MemRead, uint32_t MemWrite) {
+void MEM::memAccess(uint32_t addr, uint32_t *read_data, uint32_t write_data, uint32_t MemRead, uint32_t MemWrite, uint32_t IorD) {
 	// Do not change the status is not intended to read or write
 	if (!MemRead && !MemWrite) return;
 	// Check alignment + data memory capacity
@@ -57,6 +57,6 @@ void MEM::memAccess(uint32_t addr, uint32_t *read_data, uint32_t write_data, uin
 		memory[addr] = write_data;
 	else if (MemRead)
 		*read_data = memory[addr];
-	if (*read_data == 0)
+	if ((*read_data == 0) && (IorD == 0))
 		status = TERMINATE;
 }

@@ -30,7 +30,7 @@ void CTRL::controlSignal(uint32_t opcode, uint32_t funct, uint32_t *state, Contr
 		controls->PCSource = 0; // pc에 쓸 값 정하기, 0은 alu_result, 1은 ALUOut, 2는 jump
 		controls->IRWrite = 1; // IR에 쓸지 말지
 		controls->SavePC = 0;
-		controls->SignExtend = (opcode == OP_ADDIU) || (opcode == OP_SLTI) || (opcode == OP_SLTIU);
+		controls->SignExtend = 0;
 		*state = ID;
 	}
 	else if(*state == ID){
@@ -48,7 +48,7 @@ void CTRL::controlSignal(uint32_t opcode, uint32_t funct, uint32_t *state, Contr
 		//controls->PCSource; // pc에 쓸 값 정하기, 0은 alu_result, 1은 ALUOut, 2는 jump
 		controls->IRWrite = 0; // IR에 쓸지 말지
 		controls->SavePC = 0;
-		controls->SignExtend = (opcode == OP_ADDIU) || (opcode == OP_SLTI) || (opcode == OP_SLTIU);
+		controls->SignExtend = (opcode == OP_BEQ) || (opcode == OP_BNE);
 		*state = EX;
 	}
 	else if(*state == EX){
@@ -57,18 +57,18 @@ void CTRL::controlSignal(uint32_t opcode, uint32_t funct, uint32_t *state, Contr
 		//controls->MemtoReg; // mem 값과 alu_result 중 뭘 쓸건지
 		controls->MemWrite = 0; // 메모리 쓸건지
 		controls->ALUSrcA = 1; // operand1 정하기, 0은 PC, 1은 rs_data
-		if(opcode == OP_RTYPE) controls->ALUSrcB = 0; // operand2 정하기, 0은 rt_data, 1은 pc+4, 2는 sign extend, 3은 branch 
-		else if((opcode != OP_RTYPE) && (opcode != OP_BEQ) && (opcode != OP_BNE)) controls->ALUSrcB = 2; // operand2 정하기, 0은 rt_data, 1은 pc+4, 2는 sign extend, 3은 branch 
+		if((opcode == OP_RTYPE) || (opcode == OP_BEQ) || (opcode == OP_BNE)) controls->ALUSrcB = 0; // operand2 정하기, 0은 rt_data, 1은 pc+4, 2는 sign extend, 3은 branch 
+		else controls->ALUSrcB = 2; // operand2 정하기, 0은 rt_data, 1은 pc+4, 2는 sign extend, 3은 branch 
 		controls->RegWrite = (opcode == OP_JAL); //레지스터에 쓰는지
 		controls->PCWriteCond = ((opcode == OP_BEQ) || (opcode == OP_BNE)); // branch 조건 만족할 때만 pc 업데이트
-		controls->PCWrite = ((opcode == OP_J) || (opcode == OP_JAL)); // 무조건 pc 업데이트
+		controls->PCWrite = ((opcode == OP_J) || (opcode == OP_JAL) || ((opcode == OP_RTYPE) && (funct == FUNCT_JR))); // 무조건 pc 업데이트
 		//controls->IorD; // mem에서 가지고 올게 명령어인지, 데이터인지
 		if((opcode == OP_BEQ) || (opcode == OP_BNE)) controls->PCSource = 1; // pc에 쓸 값 정하기, 0은 alu_result, 1은 ALUOut, 2는 jump
 		else if((opcode == OP_J) || (opcode == OP_JAL)) controls->PCSource = 2; // pc에 쓸 값 정하기, 0은 alu_result, 1은 ALUOut, 2는 jump
 		else if((opcode == OP_RTYPE) && (funct == FUNCT_JR)) controls->PCSource = 3;
 		controls->IRWrite = 0; // IR에 쓸지 말지
 		controls->SavePC = (opcode == OP_JAL);
-		controls->SignExtend = (opcode == OP_ADDIU) || (opcode == OP_SLTI) || (opcode == OP_SLTIU);
+		controls->SignExtend = (opcode == OP_ADDIU) || (opcode == OP_SLTI) || (opcode == OP_SLTIU) ||(opcode == OP_LW) || (opcode == OP_SW);
 		if(opcode == OP_RTYPE){
 			switch (funct) {
 				case FUNCT_ADDU:
@@ -168,8 +168,9 @@ void CTRL::controlSignal(uint32_t opcode, uint32_t funct, uint32_t *state, Contr
 		//controls->PCSource; // pc에 쓸 값 정하기, 0은 alu_result, 1은 ALUOut, 2는 jump
 		controls->IRWrite = 0; // IR에 쓸지 말지
 		controls->SavePC = 0;
-		controls->SignExtend = (opcode == OP_ADDIU) || (opcode == OP_SLTI) || (opcode == OP_SLTIU);
+		controls->SignExtend = 0;
 		if(opcode == OP_SW) *state = IF;
+		if(opcode == OP_LW) *state = WB;
 	}
 	else if(*state == WB){
 		controls->RegDst = (opcode == OP_RTYPE); //R type인지 아닌지 보고 어떤 레지스터에 쓸지 판단
@@ -186,7 +187,7 @@ void CTRL::controlSignal(uint32_t opcode, uint32_t funct, uint32_t *state, Contr
 		//controls->PCSource; // pc에 쓸 값 정하기, 0은 alu_result, 1은 ALUOut, 2는 jump
 		controls->IRWrite = 0; // IR에 쓸지 말지
 		controls->SavePC = 0;
-		controls->SignExtend = (opcode == OP_ADDIU) || (opcode == OP_SLTI) || (opcode == OP_SLTIU);
+		controls->SignExtend = 0;
 		*state = IF;
 	}
 }
