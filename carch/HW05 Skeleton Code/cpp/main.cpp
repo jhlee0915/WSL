@@ -59,6 +59,11 @@ int main(int argc, char* argv[]) {
 			case 'c':
 				while (status == Status::CONTINUE) cpu.tick();
 				break;
+			case 'w':
+				int pc;
+				cin>>hex>>pc;
+				while (cpu.PC != pc) cpu.tick();
+				break;
 			case 'q':
 				status = Status::QUIT;
 				break;

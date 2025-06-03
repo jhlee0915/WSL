@@ -6,7 +6,7 @@
 
 CTRL::CTRL() {}
 
-void CTRL::controlSignal(uint32_t opcode, uint32_t funct, Controls *controls) {
+void CTRL::controlSignal(uint32_t opcode, uint32_t funct, Controls *controls, int stall) {
 	// FILLME
 	controls->RegDst = (opcode == OP_RTYPE);
 	controls->JR = (opcode == OP_RTYPE) && (funct == FUNCT_JR);
@@ -18,7 +18,7 @@ void CTRL::controlSignal(uint32_t opcode, uint32_t funct, Controls *controls) {
 	controls->MemWrite = (opcode == OP_SW);
 	controls->Branch = (opcode == OP_BEQ) || (opcode == OP_BNE);
 	controls->SavePC = (opcode == OP_JAL);
-	controls->SignExtend = (opcode == OP_ADDIU) || (opcode == OP_SLTI) || (opcode == OP_SLTIU);
+	controls->SignExtend = (opcode == OP_ADDIU) || (opcode == OP_SLTI) || (opcode == OP_SLTIU) || (opcode == OP_LW) || (opcode == OP_SW) ||  (opcode == OP_BEQ) || (opcode == OP_BNE);
 	if(opcode == OP_RTYPE){
 		switch (funct) {
 			case FUNCT_ADDU:
@@ -98,7 +98,19 @@ void CTRL::controlSignal(uint32_t opcode, uint32_t funct, Controls *controls) {
 			break;
 		}
 	}
-
+	if(stall){
+		controls->RegDst = 0;
+		controls->JR = 0;
+		controls->Jump = 0;
+		controls->ALUSrc = 0;
+		controls->MemtoReg = 0;
+		controls->RegWrite = 0;
+		controls->MemRead = 0;
+		controls->MemWrite = 0;
+		controls->Branch = 0;
+		controls->SavePC = 0;
+		controls->SignExtend = 0;
+	}
 	//SavePC SignExtend
 
 }

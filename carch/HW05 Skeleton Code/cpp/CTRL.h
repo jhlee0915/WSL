@@ -31,7 +31,7 @@ public:
 		uint32_t immi;
 		uint32_t immj;
 	};
-	void controlSignal(uint32_t opcode, uint32_t funct, Controls *controls);
+	void controlSignal(uint32_t opcode, uint32_t funct, Controls *controls, int stall);
 	void splitInst(uint32_t inst, ParsedInst *parsed_inst);
 	void signExtend(uint32_t immi, uint32_t SignExtend, uint32_t *ext_imm);
 };
