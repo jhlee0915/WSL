@@ -6,6 +6,84 @@ module CPU(
 	input		rst,
 	output 		halt
 	);
+
+	// MEM/WB pipeline registers
+	reg [1:0]  MEM_WB_RegDst;
+	reg [1:0]  MEM_WB_Jump;
+	reg [1:0]  MEM_WB_Branch;
+	reg [1:0]  MEM_WB_JR;
+	reg [1:0]  MEM_WB_MemRead;
+	reg [1:0]  MEM_WB_MemtoReg;
+	reg [1:0]  MEM_WB_MemWrite;
+	reg [1:0]  MEM_WB_ALUSrc;
+	reg [1:0]  MEM_WB_SignExtend;
+	reg [1:0]  MEM_WB_RegWrite;
+	reg [1:0]  MEM_WB_ALUOp;
+	reg [1:0]  MEM_WB_SavePC;
+
+	reg [31:0] MEM_WB_PC;
+	reg [31:0] MEM_WB_mem_data;
+	reg [31:0] MEM_WB_alu_result;
+	reg [31:0] MEM_WB_wr_reg;
+	reg [31:0] MEM_WB_rs;
+	reg [31:0] MEM_WB_rd;
+	reg [31:0] MEM_WB_rt;
+	reg [31:0] MEM_WB_inst;
+
+	// EX/MEM pipeline registers
+	reg [1:0]  EX_MEM_RegDst;
+	reg [1:0]  EX_MEM_Jump;
+	reg [1:0]  EX_MEM_Branch;
+	reg [1:0]  EX_MEM_JR;
+	reg [1:0]  EX_MEM_MemRead;
+	reg [1:0]  EX_MEM_MemtoReg;
+	reg [1:0]  EX_MEM_MemWrite;
+	reg [1:0]  EX_MEM_ALUSrc;
+	reg [1:0]  EX_MEM_SignExtend;
+	reg [1:0]  EX_MEM_RegWrite;
+	reg [1:0]  EX_MEM_ALUOp;
+	reg [1:0]  EX_MEM_SavePC;
+
+	reg [31:0] EX_MEM_alu_result;
+	reg [31:0] EX_MEM_wr_data;
+	reg [31:0] EX_MEM_wr_reg;
+	reg [31:0] EX_MEM_branch_addr;
+	reg [31:0] EX_MEM_PC;
+	reg [31:0] EX_MEM_rs;
+	reg [31:0] EX_MEM_rd;
+	reg [31:0] EX_MEM_rt;
+	reg [31:0] EX_MEM_inst;
+
+	// ID/EX pipeline registers
+	reg [1:0]  ID_EX_RegDst;
+	reg [1:0]  ID_EX_Jump;
+	reg [1:0]  ID_EX_Branch;
+	reg [1:0]  ID_EX_JR;
+	reg [1:0]  ID_EX_MemRead;
+	reg [1:0]  ID_EX_MemtoReg;
+	reg [1:0]  ID_EX_MemWrite;
+	reg [1:0]  ID_EX_ALUSrc;
+	reg [1:0]  ID_EX_SignExtend;
+	reg [1:0]  ID_EX_RegWrite;
+	reg [1:0]  ID_EX_ALUOp;
+	reg [1:0]  ID_EX_SavePC;
+
+	reg [31:0] ID_EX_PC;
+	reg [31:0] ID_EX_dest;
+	reg [31:0] ID_EX_rs_data;
+	reg [31:0] ID_EX_rt_data;
+	reg [31:0] ID_EX_rs;
+	reg [31:0] ID_EX_rd;
+	reg [31:0] ID_EX_rt;
+	reg [31:0] ID_EX_immi;
+	reg [31:0] ID_EX_immj;
+	reg [31:0] ID_EX_shamt;
+	reg [31:0] ID_EX_inst;
+
+	// IF/ID pipeline registers
+	reg [31:0] IF_ID_PC;
+	reg [31:0] IF_ID_inst;
+
 	
 	// Split the instructions
 	// Instruction-related wires
@@ -32,6 +110,7 @@ module CPU(
 	wire			RegWrite;
 	wire [3:0]		ALUOp;
 	wire			SavePC;
+	wire			stall;
 
 	// Sign extend the immediate
 	wire [31:0]		ext_imm;
@@ -62,7 +141,29 @@ module CPU(
 
 	assign halt				= (inst == 32'b0);
 
+	assign operand1			= ID_EX_rs_data;
+	assign operand2			= ID_EX_ALUSrc ? ID_EX_immi : ID_EX_rt_data;
+	assign wr_data			= MEM_WB_MemtoReg ? MEM_WB_mem_data : (MEM_WB_SavePC ? MEM_WB_PC : MEM_WB_alu_result);
+	assign wr_addr			= MEM_WB_wr_reg;
+
 	always @(*) begin
+
+		//ID
+		opcode = IF_ID_inst>>26;
+		rs = (IF_ID_inst<<6)>>27;
+		rt = (IF_ID_inst<<11)>>27;
+		rd = (IF_ID_inst<<16)>>27;
+		shamt = (IF_ID_inst<<21)>>27;
+		funct = (IF_ID_inst<<26)>>26;
+		immi = (IF_ID_inst<<16)>>16;
+		immj = (IF_ID_inst<<6)>>6;
+
+		if (SignExtend) begin
+    	    ext_imm = {{16{immi[15]}}, immi};
+   		end else begin
+	        ext_imm = {16'b0, immi};
+    	end
+
 	end
 
 
@@ -75,7 +176,7 @@ module CPU(
 	end
 	
 
-	CTRL ctrl ();
+	CTRL ctrl (clk, rst, opcode, funct);
 
 	RF rf ();
 

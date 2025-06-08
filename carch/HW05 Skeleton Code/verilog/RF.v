@@ -1,6 +1,7 @@
 `timescale 1ns / 100ps
 
 module RF (
+	// You may also change the input and output ports (maybe changing reg to wire)
 		input clk,
 		input rst,
 		// Read-related ports
@@ -15,18 +16,22 @@ module RF (
 	);
 
     reg [31:0] register_file [0:31];
+
 	
-	// FIXME (Perform Read Operation)
+	// Fill in the asynchronous functions
 	always @(*) begin
+		rd_data1 = register_file[rd_addr1];
+		rd_data2 = register_file[rd_addr2];
 	end
+	//assign ??
     
 	always @(posedge clk) begin
-		// Reset the regsiter file to pre-defined values
 		if (rst) begin
-        	$readmemh("initial_reg.mem", register_file);
+			$readmemh("initial_reg.mem", register_file);
 		end
-		else begin
-			// FIXME (Write Operation ...)
+		// FILL what happens synchronously
+		if (RegWrite && wr_addr != 0) begin
+			register_file[wr_addr] = wr_data;
 		end
 	end
 
