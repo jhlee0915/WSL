@@ -7,19 +7,21 @@ module CPU(
 	output 		halt
 	);
 
+	//===============================
 	// MEM/WB pipeline registers
-	reg [1:0]  MEM_WB_RegDst;
-	reg [1:0]  MEM_WB_Jump;
-	reg [1:0]  MEM_WB_Branch;
-	reg [1:0]  MEM_WB_JR;
-	reg [1:0]  MEM_WB_MemRead;
-	reg [1:0]  MEM_WB_MemtoReg;
-	reg [1:0]  MEM_WB_MemWrite;
-	reg [1:0]  MEM_WB_ALUSrc;
-	reg [1:0]  MEM_WB_SignExtend;
-	reg [1:0]  MEM_WB_RegWrite;
-	reg [1:0]  MEM_WB_ALUOp;
-	reg [1:0]  MEM_WB_SavePC;
+	//===============================
+	reg        MEM_WB_RegDst;
+	reg        MEM_WB_Jump;
+	reg        MEM_WB_Branch;
+	reg        MEM_WB_JR;
+	reg        MEM_WB_MemRead;
+	reg        MEM_WB_MemtoReg;
+	reg        MEM_WB_MemWrite;
+	reg        MEM_WB_ALUSrc;
+	reg        MEM_WB_SignExtend;
+	reg        MEM_WB_RegWrite;
+	reg [4:0]  MEM_WB_ALUOp;
+	reg        MEM_WB_SavePC;
 
 	reg [31:0] MEM_WB_PC;
 	reg [31:0] MEM_WB_mem_data;
@@ -30,19 +32,21 @@ module CPU(
 	reg [31:0] MEM_WB_rt;
 	reg [31:0] MEM_WB_inst;
 
+	//===============================
 	// EX/MEM pipeline registers
-	reg [1:0]  EX_MEM_RegDst;
-	reg [1:0]  EX_MEM_Jump;
-	reg [1:0]  EX_MEM_Branch;
-	reg [1:0]  EX_MEM_JR;
-	reg [1:0]  EX_MEM_MemRead;
-	reg [1:0]  EX_MEM_MemtoReg;
-	reg [1:0]  EX_MEM_MemWrite;
-	reg [1:0]  EX_MEM_ALUSrc;
-	reg [1:0]  EX_MEM_SignExtend;
-	reg [1:0]  EX_MEM_RegWrite;
-	reg [1:0]  EX_MEM_ALUOp;
-	reg [1:0]  EX_MEM_SavePC;
+	//===============================
+	reg        EX_MEM_RegDst;
+	reg        EX_MEM_Jump;
+	reg        EX_MEM_Branch;
+	reg        EX_MEM_JR;
+	reg        EX_MEM_MemRead;
+	reg        EX_MEM_MemtoReg;
+	reg        EX_MEM_MemWrite;
+	reg        EX_MEM_ALUSrc;
+	reg        EX_MEM_SignExtend;
+	reg        EX_MEM_RegWrite;
+	reg [4:0]  EX_MEM_ALUOp;
+	reg        EX_MEM_SavePC;
 
 	reg [31:0] EX_MEM_alu_result;
 	reg [31:0] EX_MEM_wr_data;
@@ -54,19 +58,21 @@ module CPU(
 	reg [31:0] EX_MEM_rt;
 	reg [31:0] EX_MEM_inst;
 
+	//===============================
 	// ID/EX pipeline registers
-	reg [1:0]  ID_EX_RegDst;
-	reg [1:0]  ID_EX_Jump;
-	reg [1:0]  ID_EX_Branch;
-	reg [1:0]  ID_EX_JR;
-	reg [1:0]  ID_EX_MemRead;
-	reg [1:0]  ID_EX_MemtoReg;
-	reg [1:0]  ID_EX_MemWrite;
-	reg [1:0]  ID_EX_ALUSrc;
-	reg [1:0]  ID_EX_SignExtend;
-	reg [1:0]  ID_EX_RegWrite;
-	reg [1:0]  ID_EX_ALUOp;
-	reg [1:0]  ID_EX_SavePC;
+	//===============================
+	reg        ID_EX_RegDst;
+	reg        ID_EX_Jump;
+	reg        ID_EX_Branch;
+	reg        ID_EX_JR;
+	reg        ID_EX_MemRead;
+	reg        ID_EX_MemtoReg;
+	reg        ID_EX_MemWrite;
+	reg        ID_EX_ALUSrc;
+	reg        ID_EX_SignExtend;
+	reg        ID_EX_RegWrite;
+	reg [4:0]  ID_EX_ALUOp;
+	reg        ID_EX_SavePC;
 
 	reg [31:0] ID_EX_PC;
 	reg [31:0] ID_EX_dest;
@@ -80,7 +86,9 @@ module CPU(
 	reg [31:0] ID_EX_shamt;
 	reg [31:0] ID_EX_inst;
 
+	//===============================
 	// IF/ID pipeline registers
+	//===============================
 	reg [31:0] IF_ID_PC;
 	reg [31:0] IF_ID_inst;
 
@@ -138,6 +146,7 @@ module CPU(
 	reg [31:0]	PC_next;
 
 	// Define the wires
+	wire [4:0]	dest;
 
 	assign halt				= (inst == 32'b0);
 
@@ -145,6 +154,8 @@ module CPU(
 	assign operand2			= ID_EX_ALUSrc ? ID_EX_immi : ID_EX_rt_data;
 	assign wr_data			= MEM_WB_MemtoReg ? MEM_WB_mem_data : (MEM_WB_SavePC ? MEM_WB_PC : MEM_WB_alu_result);
 	assign wr_addr			= MEM_WB_wr_reg;
+	assign dest				= RegDst ? rd : (SavePC ? 31 : rt);
+	assign mem_write_data	= EX_MEM_wr_data;
 
 	always @(*) begin
 
@@ -171,17 +182,195 @@ module CPU(
 	always @(posedge clk) begin
 		if (rst)	PC <= 0;
 		else begin
-			PC <= PC_next;
+			if (ID_EX_Jump) begin
+				PC			<= { PC[31:28], ID_EX_immj, 2'b00 };
+				IF_ID_inst 	<= 32'b0;
+        		ID_EX_PC	<= '0;
+			end
+			else if (ID_EX_JR) begin
+				PC 			<= ID_EX_rs_data;
+				IF_ID_inst 	<= 32'b0;
+        		ID_EX_PC	<= '0;
+			end
+    		else if (EX_MEM_Branch & EX_MEM_alu_result) begin
+				PC 			<= EX_MEM_branch_addr;
+				ID_EX_RegDst     <= 1'b0;
+				ID_EX_Jump       <= 1'b0;
+				ID_EX_Branch     <= 1'b0;
+				ID_EX_JR         <= 1'b0;
+				ID_EX_MemRead    <= 1'b0;
+				ID_EX_MemtoReg   <= 1'b0;
+				ID_EX_MemWrite   <= 1'b0;
+				ID_EX_ALUSrc     <= 1'b0;
+				ID_EX_SignExtend <= 1'b0;
+				ID_EX_RegWrite   <= 1'b0;
+				ID_EX_ALUOp      <= 1'b0;
+				ID_EX_SavePC     <= 1'b0;
+
+				ID_EX_PC         <= 32'b0;
+				ID_EX_dest       <= 32'b0;
+				ID_EX_rs_data    <= 32'b0;
+				ID_EX_rt_data    <= 32'b0;
+				ID_EX_rs         <= 32'b0;
+				ID_EX_rd         <= 32'b0;
+				ID_EX_rt         <= 32'b0;
+				ID_EX_immi       <= 32'b0;
+				ID_EX_immj       <= 32'b0;
+				ID_EX_shamt      <= 32'b0;
+				ID_EX_inst       <= 32'b0;
+
+		        IF_ID_PC         <= 32'b0;
+        		IF_ID_inst       <= 32'b0;
+			end
+			else if (stall);
+			else PC <= PC + 4;
+			//------------------------------------------------
+			// MEM/WB <= EX/MEM
+			//------------------------------------------------
+			MEM_WB_RegDst     <= EX_MEM_RegDst;
+			MEM_WB_Jump       <= EX_MEM_Jump;
+			MEM_WB_Branch     <= EX_MEM_Branch;
+			MEM_WB_JR         <= EX_MEM_JR;
+			MEM_WB_MemRead    <= EX_MEM_MemRead;
+			MEM_WB_MemtoReg   <= EX_MEM_MemtoReg;
+			MEM_WB_MemWrite   <= EX_MEM_MemWrite;
+			MEM_WB_ALUSrc     <= EX_MEM_ALUSrc;
+			MEM_WB_SignExtend <= EX_MEM_SignExtend;
+			MEM_WB_RegWrite   <= EX_MEM_RegWrite;
+			MEM_WB_ALUOp      <= EX_MEM_ALUOp;
+			MEM_WB_SavePC     <= EX_MEM_SavePC;
+
+			MEM_WB_PC         <= EX_MEM_PC;
+			MEM_WB_mem_data   <= mem_read_data;          // Data-memory read value
+			MEM_WB_alu_result <= EX_MEM_alu_result;
+			MEM_WB_wr_reg     <= EX_MEM_wr_reg;
+			MEM_WB_rs         <= EX_MEM_rs;
+			MEM_WB_rd         <= EX_MEM_rd;
+			MEM_WB_rt         <= EX_MEM_rt;
+			MEM_WB_inst       <= EX_MEM_inst;
+
+			//------------------------------------------------
+			// EX/MEM <= ID/EX
+			//------------------------------------------------
+			EX_MEM_RegDst     <= ID_EX_RegDst;
+			EX_MEM_Jump       <= ID_EX_Jump;
+			EX_MEM_Branch     <= ID_EX_Branch;
+			EX_MEM_JR         <= ID_EX_JR;
+			EX_MEM_MemRead    <= ID_EX_MemRead;
+			EX_MEM_MemtoReg   <= ID_EX_MemtoReg;
+			EX_MEM_MemWrite   <= ID_EX_MemWrite;
+			EX_MEM_ALUSrc     <= ID_EX_ALUSrc;
+			EX_MEM_SignExtend <= ID_EX_SignExtend;
+			EX_MEM_RegWrite   <= ID_EX_RegWrite;
+			EX_MEM_ALUOp      <= ID_EX_ALUOp;
+			EX_MEM_SavePC     <= ID_EX_SavePC;
+
+			EX_MEM_alu_result <= alu_result;
+			EX_MEM_wr_data    <= ID_EX_rt_data;
+			EX_MEM_wr_reg     <= ID_EX_dest;
+			EX_MEM_branch_addr<= ID_EX_PC + (ID_EX_immi << 2);
+			EX_MEM_PC         <= ID_EX_PC;
+			EX_MEM_rs         <= ID_EX_rs;
+			EX_MEM_rd         <= ID_EX_rd;
+			EX_MEM_rt         <= ID_EX_rt;
+			EX_MEM_inst       <= ID_EX_inst;
+
+			//------------------------------------------------
+			// ID/EX <= IF/ID (및 제어 유닛)
+			//------------------------------------------------
+			ID_EX_RegDst      <= RegDst;
+			ID_EX_Jump        <= Jump;
+			ID_EX_Branch      <= Branch;
+			ID_EX_JR          <= JR;
+			ID_EX_MemRead     <= MemRead;
+			ID_EX_MemtoReg    <= MemtoReg;
+			ID_EX_MemWrite    <= MemWrite;
+			ID_EX_ALUSrc      <= ALUSrc;
+			ID_EX_SignExtend  <= SignExtend;
+			ID_EX_RegWrite    <= RegWrite;
+			ID_EX_ALUOp       <= ALUOp;
+			ID_EX_SavePC      <= SavePC;
+
+			ID_EX_PC          <= IF_ID_PC;
+			ID_EX_rs_data     <= rd_data1;
+			ID_EX_rt_data     <= rd_data2;
+			ID_EX_rs          <= rs;
+			ID_EX_rd          <= rd;
+			ID_EX_rt          <= rt;
+			ID_EX_immi        <= ext_imm;
+			ID_EX_immj        <= immj;
+			ID_EX_shamt       <= shamt;
+			ID_EX_inst        <= IF_ID_inst;
+			ID_EX_dest        <= dest;
+
+
+			if(!stall) begin 
+				//------------------------------------------------
+				// IF/ID <= Fetch stage
+				//------------------------------------------------
+				IF_ID_PC          <= PC;
+				IF_ID_inst        <= inst;
+			end
 		end
 	end
 	
 
-	CTRL ctrl (clk, rst, opcode, funct);
+	CTRL ctrl (
+    .clk       (clk),
+    .rst       (rst),
+    .opcode    (opcode),
+    .funct     (funct),
 
-	RF rf ();
+    .RegDst    (RegDst),
+    .Jump      (Jump),
+    .Branch    (Branch),
+    .JR        (JR),
+    .MemRead   (MemRead),
+    .MemtoReg  (MemtoReg),
+    .MemWrite  (MemWrite),
+    .ALUSrc    (ALUSrc),
+    .SignExtend(SignExtend),
+    .RegWrite  (RegWrite),
+    .ALUOp     (ALUOp),
+    .SavePC    (SavePC)
+	);
 
-	MEM mem ();
+	RF rf (
+    .clk      (clk),
+    .rst      (rst),
+
+    .rd_addr1 (rd_addr1),
+    .rd_addr2 (rd_addr2),
+    .rd_data1 (rd_data1),
+    .rd_data2 (rd_data2),
+
+    .RegWrite (MEM_WB_RegWrite),
+    .wr_addr  (MEM_WB_wr_reg),
+    .wr_data  (wr_data)
+	);
+
+	MEM mem (
+    .clk            (clk),
+    .rst            (rst),
+
+    .inst_addr      (PC),          
+    .inst           (inst),
+
+    .mem_addr       (mem_addr),
+    .MemWrite       (EX_MEM_MemWrite),
+    .mem_write_data (mem_write_data),
+    .mem_read_data  (mem_read_data)
+	);
 	
-	ALU alu ();
+	
+	ALU alu (
+    .operand1   	(operand1),
+    .operand2  	 	(operand2),
+    .shamt  		(ID_EX_shamt[4:0]),
+    .funct 			(ID_EX_ALUOp),
+    .alu_result 	(alu_result),
+	);
+
+	HAZARD hazard();
 	
 endmodule
