@@ -190,7 +190,7 @@ module CPU(
 			else if (ID_EX_JR) begin
 				PC 			<= ID_EX_rs_data;
 				IF_ID_inst 	<= 32'b0;
-        		ID_EX_PC	<= '0;
+        		ID_EX_PC	<= 32'b0;
 			end
     		else if (EX_MEM_Branch & EX_MEM_alu_result) begin
 				PC 			<= EX_MEM_branch_addr;
@@ -371,6 +371,22 @@ module CPU(
     .alu_result 	(alu_result),
 	);
 
-	HAZARD hazard();
+	
+	HAZARD hazard_unit (
+	.rs              (rs),
+	.rt              (rt),
+
+	.ID_EX_dest      (ID_EX_dest[4:0]),
+	.ID_EX_RegWrite  (ID_EX_RegWrite),
+
+	.EX_MEM_wr_reg   (EX_MEM_wr_reg[4:0]),
+	.EX_MEM_RegWrite (EX_MEM_RegWrite),
+
+	.MEM_WB_wr_reg   (MEM_WB_wr_reg[4:0]),
+	.MEM_WB_RegWrite (MEM_WB_RegWrite),
+
+	.stall           (hazard_stall)
+	);
+
 	
 endmodule
