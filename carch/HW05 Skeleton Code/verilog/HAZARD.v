@@ -6,12 +6,12 @@ module HAZARD(
 	input [4:0] rs,
 	input [4:0] rt,
     input [5:0] opcode,
-    input [5:0] ID_EX_dest,
-    input [5:0] ID_EX_RegWrite,
-    input [5:0] EX_MEM_wr_reg,
-    input [5:0] MEM_WB_wr_reg,
-    input [5:0] EX_MEM_RegWrite,
-    input [5:0] MEM_WB_RegWrite,
+    input [4:0] ID_EX_dest,
+    input       ID_EX_RegWrite,
+    input [4:0] EX_MEM_wr_reg,
+    input [4:0] MEM_WB_wr_reg,
+    input       EX_MEM_RegWrite,
+    input       MEM_WB_RegWrite,
 
 	// output
 	output reg stall

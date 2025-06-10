@@ -6,7 +6,7 @@ module ALU(
 		input [31:0]		operand1,
 		input [31:0]		operand2,
 		input [4:0]			shamt,
-		input [3:0]			funct,
+		input [5:0]			funct,
 		output reg [31:0]	alu_result
 	);
 	

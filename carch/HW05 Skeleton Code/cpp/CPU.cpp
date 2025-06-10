@@ -224,7 +224,7 @@ uint32_t CPU::tick() {
 
 	// MEM
 	mem.dmemAccess(EX_MEM.alu_result, &mem_data, EX_MEM.wr_data, EX_MEM.controls.MemRead, EX_MEM.controls.MemWrite);
-		if (status != CONTINUE) return 0;
+	if (status != CONTINUE) return 0;
 
 
 	// WB

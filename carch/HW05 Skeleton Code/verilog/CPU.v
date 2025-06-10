@@ -26,10 +26,10 @@ module CPU(
 	reg [31:0] MEM_WB_PC;
 	reg [31:0] MEM_WB_mem_data;
 	reg [31:0] MEM_WB_alu_result;
-	reg [31:0] MEM_WB_wr_reg;
-	reg [31:0] MEM_WB_rs;
-	reg [31:0] MEM_WB_rd;
-	reg [31:0] MEM_WB_rt;
+	reg [4:0] MEM_WB_wr_reg;
+	reg [4:0] MEM_WB_rs;
+	reg [4:0] MEM_WB_rd;
+	reg [4:0] MEM_WB_rt;
 	reg [31:0] MEM_WB_inst;
 
 	//===============================
@@ -50,12 +50,12 @@ module CPU(
 
 	reg [31:0] EX_MEM_alu_result;
 	reg [31:0] EX_MEM_wr_data;
-	reg [31:0] EX_MEM_wr_reg;
+	reg [4:0] EX_MEM_wr_reg;
 	reg [31:0] EX_MEM_branch_addr;
 	reg [31:0] EX_MEM_PC;
-	reg [31:0] EX_MEM_rs;
-	reg [31:0] EX_MEM_rd;
-	reg [31:0] EX_MEM_rt;
+	reg [4:0] EX_MEM_rs;
+	reg [4:0] EX_MEM_rd;
+	reg [4:0] EX_MEM_rt;
 	reg [31:0] EX_MEM_inst;
 
 	//===============================
@@ -71,19 +71,19 @@ module CPU(
 	reg        ID_EX_ALUSrc;
 	reg        ID_EX_SignExtend;
 	reg        ID_EX_RegWrite;
-	reg [4:0]  ID_EX_ALUOp;
+	reg [5:0]  ID_EX_ALUOp;
 	reg        ID_EX_SavePC;
 
 	reg [31:0] ID_EX_PC;
-	reg [31:0] ID_EX_dest;
+	reg [4:0] ID_EX_dest;
 	reg [31:0] ID_EX_rs_data;
 	reg [31:0] ID_EX_rt_data;
-	reg [31:0] ID_EX_rs;
-	reg [31:0] ID_EX_rd;
-	reg [31:0] ID_EX_rt;
+	reg [4:0] ID_EX_rs;
+	reg [4:0] ID_EX_rd;
+	reg [4:0] ID_EX_rt;
 	reg [31:0] ID_EX_immi;
 	reg [31:0] ID_EX_immj;
-	reg [31:0] ID_EX_shamt;
+	reg [4:0] ID_EX_shamt;
 	reg [31:0] ID_EX_inst;
 
 	//===============================
@@ -148,7 +148,7 @@ module CPU(
 	// Define the wires
 	wire [4:0]	dest;
 
-	assign halt				= (inst == 32'b0);
+	assign halt				= (inst == 32'b0) && (IF_ID_inst == 32'b0) && (ID_EX_inst == 32'b0) && (EX_MEM_inst == 32'b0) && (MEM_WB_inst == 32'b0);
 
 	assign operand1			= ID_EX_rs_data;
 	assign operand2			= ID_EX_ALUSrc ? ID_EX_immi : ID_EX_rt_data;
@@ -156,6 +156,7 @@ module CPU(
 	assign wr_addr			= MEM_WB_wr_reg;
 	assign dest				= RegDst ? rd : (SavePC ? 31 : rt);
 	assign mem_write_data	= EX_MEM_wr_data;
+	assign mem_addr			= EX_MEM_alu_result;
 
 			//ID
 	assign	opcode = IF_ID_inst>>26;
@@ -167,27 +168,98 @@ module CPU(
 	assign	immi = (IF_ID_inst<<16)>>16;
 	assign	immj = (IF_ID_inst<<6)>>6;
 	assign  ext_imm = SignExtend ? {{16{immi[15]}}, immi} :  {16'b0, immi};
+
+	assign	rd_addr1 = rs;
+	assign	rd_addr2 = rt;
+
 	always @(*) begin
 	end
 
 
 	// Update the Clock
 	always @(posedge clk) begin
-		if (rst)	PC <= 0;
+		if (rst) begin	
+			PC = 0;
+			IF_ID_inst = 32'b0;
+			EX_MEM_Branch = '0;
+			EX_MEM_alu_result = 0;
+			ID_EX_Jump = '0;
+			ID_EX_JR = '0;
+			ID_EX_Branch = '0;
+		end
 		else begin
-			$display("%h\n", PC);
+			//$display("IF: %h %h	    ID: %h %h     EX: %h %h      MEM: %h %h      WB: %h %h     STALL : %d", PC, inst, IF_ID_PC, IF_ID_inst, ID_EX_PC, ID_EX_inst, EX_MEM_PC, EX_MEM_inst, MEM_WB_PC, MEM_WB_inst, stall);
 			if (ID_EX_Jump) begin
-				PC			<= { PC[31:28], ID_EX_immj, 2'b00 };
-				IF_ID_inst 	<= 32'b0;
-        		ID_EX_PC	<= '0;
+				
+				PC			= { PC[31:28], ID_EX_immj, 2'b00 };
+				//$display("jump %h", PC);
+				ID_EX_RegDst     <= 1'b0;
+				ID_EX_Jump       <= 1'b0;
+				ID_EX_Branch     <= 1'b0;
+				ID_EX_JR         <= 1'b0;
+				ID_EX_MemRead    <= 1'b0;
+				ID_EX_MemtoReg   <= 1'b0;
+				ID_EX_MemWrite   <= 1'b0;
+				ID_EX_ALUSrc     <= 1'b0;
+				ID_EX_SignExtend <= 1'b0;
+				ID_EX_RegWrite   <= 1'b0;
+				ID_EX_ALUOp      <= 1'b0;
+				ID_EX_SavePC     <= 1'b0;
+
+				ID_EX_PC         <= 32'b0;
+				ID_EX_dest       <= 32'b0;
+				ID_EX_rs_data    <= 32'b0;
+				ID_EX_rt_data    <= 32'b0;
+				ID_EX_rs         <= 32'b0;
+				ID_EX_rd         <= 32'b0;
+				ID_EX_rt         <= 32'b0;
+				ID_EX_immi       <= 32'b0;
+				ID_EX_immj       <= 32'b0;
+				ID_EX_shamt      <= 32'b0;
+				ID_EX_inst       <= 32'b0;
+
+		        IF_ID_PC         <= 32'b0;
+        		IF_ID_inst       <= 32'b0;
 			end
 			else if (ID_EX_JR) begin
-				PC 			<= ID_EX_rs_data;
-				IF_ID_inst 	<= 32'b0;
-        		ID_EX_PC	<= 32'b0;
+				PC 			= ID_EX_rs_data;
+				//$display("jump %h", PC);
+				ID_EX_RegDst     <= 1'b0;
+				ID_EX_Jump       <= 1'b0;
+				ID_EX_Branch     <= 1'b0;
+				ID_EX_JR         <= 1'b0;
+				ID_EX_MemRead    <= 1'b0;
+				ID_EX_MemtoReg   <= 1'b0;
+				ID_EX_MemWrite   <= 1'b0;
+				ID_EX_ALUSrc     <= 1'b0;
+				ID_EX_SignExtend <= 1'b0;
+				ID_EX_RegWrite   <= 1'b0;
+				ID_EX_ALUOp      <= 1'b0;
+				ID_EX_SavePC     <= 1'b0;
+
+				ID_EX_PC         <= 32'b0;
+				ID_EX_dest       <= 32'b0;
+				ID_EX_rs_data    <= 32'b0;
+				ID_EX_rt_data    <= 32'b0;
+				ID_EX_rs         <= 32'b0;
+				ID_EX_rd         <= 32'b0;
+				ID_EX_rt         <= 32'b0;
+				ID_EX_immi       <= 32'b0;
+				ID_EX_immj       <= 32'b0;
+				ID_EX_shamt      <= 32'b0;
+				ID_EX_inst       <= 32'b0;
+
+		        IF_ID_PC         <= 32'b0;
+        		IF_ID_inst       <= 32'b0;
+
 			end
-    		else if (EX_MEM_Branch & EX_MEM_alu_result) begin
-				PC 			<= EX_MEM_branch_addr;
+    		else if (EX_MEM_Branch && EX_MEM_alu_result) begin
+				PC 			= EX_MEM_branch_addr;
+
+				EX_MEM_Branch <= 0;
+				EX_MEM_MemWrite <= 0;
+				EX_MEM_RegWrite <= 0;
+
 				ID_EX_RegDst     <= 1'b0;
 				ID_EX_Jump       <= 1'b0;
 				ID_EX_Branch     <= 1'b0;
@@ -217,7 +289,7 @@ module CPU(
         		IF_ID_inst       <= 32'b0;
 			end
 			else if (stall);
-			else PC <= PC + 4;
+			else PC = PC + 4;
 			//------------------------------------------------
 			// MEM/WB <= EX/MEM
 			//------------------------------------------------
@@ -242,7 +314,7 @@ module CPU(
 			MEM_WB_rd         <= EX_MEM_rd;
 			MEM_WB_rt         <= EX_MEM_rt;
 			MEM_WB_inst       <= EX_MEM_inst;
-
+			if(!(EX_MEM_Branch && EX_MEM_alu_result)) begin
 			//------------------------------------------------
 			// EX/MEM <= ID/EX
 			//------------------------------------------------
@@ -268,7 +340,9 @@ module CPU(
 			EX_MEM_rd         <= ID_EX_rd;
 			EX_MEM_rt         <= ID_EX_rt;
 			EX_MEM_inst       <= ID_EX_inst;
-
+			
+			if((!ID_EX_Jump)&&(!ID_EX_JR)) begin 
+			
 			//------------------------------------------------
 			// ID/EX <= IF/ID (및 제어 유닛)
 			//------------------------------------------------
@@ -296,14 +370,14 @@ module CPU(
 			ID_EX_shamt       <= shamt;
 			ID_EX_inst        <= IF_ID_inst;
 			ID_EX_dest        <= dest;
-
-
-			if(!stall) begin 
+			if(!stall) begin
 				//------------------------------------------------
 				// IF/ID <= Fetch stage
 				//------------------------------------------------
 				IF_ID_PC          <= PC;
 				IF_ID_inst        <= inst;
+			end
+			end
 			end
 		end
 	end
@@ -359,7 +433,7 @@ module CPU(
 	ALU alu (
     .operand1   	(operand1),
     .operand2  	 	(operand2),
-    .shamt  		(ID_EX_shamt[4:0]),
+    .shamt  		(ID_EX_shamt),
     .funct 			(ID_EX_ALUOp),
     .alu_result 	(alu_result)
 	);
@@ -369,16 +443,18 @@ module CPU(
 	.rs              (rs),
 	.rt              (rt),
 
-	.ID_EX_dest      (ID_EX_dest[4:0]),
+	.opcode			(opcode),
+
+	.ID_EX_dest      (ID_EX_dest),
 	.ID_EX_RegWrite  (ID_EX_RegWrite),
 
-	.EX_MEM_wr_reg   (EX_MEM_wr_reg[4:0]),
+	.EX_MEM_wr_reg   (EX_MEM_wr_reg),
 	.EX_MEM_RegWrite (EX_MEM_RegWrite),
 
-	.MEM_WB_wr_reg   (MEM_WB_wr_reg[4:0]),
+	.MEM_WB_wr_reg   (MEM_WB_wr_reg),
 	.MEM_WB_RegWrite (MEM_WB_RegWrite),
 
-	.stall           (hazard_stall)
+	.stall           (stall)
 	);
 
 	
