@@ -128,8 +128,8 @@ module CPU(
 	wire [4:0]		rd_addr2;
 	wire [31:0]		rd_data1;
 	wire [31:0]		rd_data2;
-	reg [4:0]		wr_addr;
-	reg [31:0]		wr_data;
+	wire [4:0]		wr_addr;
+	wire [31:0]		wr_data;
 
 	// MEM-related wires
 	wire [31:0]		mem_addr;
@@ -157,24 +157,17 @@ module CPU(
 	assign dest				= RegDst ? rd : (SavePC ? 31 : rt);
 	assign mem_write_data	= EX_MEM_wr_data;
 
+			//ID
+	assign	opcode = IF_ID_inst>>26;
+	assign	rs = (IF_ID_inst<<6)>>27;
+	assign	rt = (IF_ID_inst<<11)>>27;
+	assign	rd = (IF_ID_inst<<16)>>27;
+	assign	shamt = (IF_ID_inst<<21)>>27;
+	assign	funct = (IF_ID_inst<<26)>>26;
+	assign	immi = (IF_ID_inst<<16)>>16;
+	assign	immj = (IF_ID_inst<<6)>>6;
+	assign  ext_imm = SignExtend ? {{16{immi[15]}}, immi} :  {16'b0, immi};
 	always @(*) begin
-
-		//ID
-		opcode = IF_ID_inst>>26;
-		rs = (IF_ID_inst<<6)>>27;
-		rt = (IF_ID_inst<<11)>>27;
-		rd = (IF_ID_inst<<16)>>27;
-		shamt = (IF_ID_inst<<21)>>27;
-		funct = (IF_ID_inst<<26)>>26;
-		immi = (IF_ID_inst<<16)>>16;
-		immj = (IF_ID_inst<<6)>>6;
-
-		if (SignExtend) begin
-    	    ext_imm = {{16{immi[15]}}, immi};
-   		end else begin
-	        ext_imm = {16'b0, immi};
-    	end
-
 	end
 
 
@@ -182,6 +175,7 @@ module CPU(
 	always @(posedge clk) begin
 		if (rst)	PC <= 0;
 		else begin
+			$display("%h\n", PC);
 			if (ID_EX_Jump) begin
 				PC			<= { PC[31:28], ID_EX_immj, 2'b00 };
 				IF_ID_inst 	<= 32'b0;
@@ -316,10 +310,9 @@ module CPU(
 	
 
 	CTRL ctrl (
-    .clk       (clk),
-    .rst       (rst),
     .opcode    (opcode),
     .funct     (funct),
+	.stall		(stall),
 
     .RegDst    (RegDst),
     .Jump      (Jump),
@@ -368,7 +361,7 @@ module CPU(
     .operand2  	 	(operand2),
     .shamt  		(ID_EX_shamt[4:0]),
     .funct 			(ID_EX_ALUOp),
-    .alu_result 	(alu_result),
+    .alu_result 	(alu_result)
 	);
 
 	
